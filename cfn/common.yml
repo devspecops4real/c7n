@@ -1,0 +1,114 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM roles for lambda functions and SQS queue for mail notification to support cloud custodian
+Resources:
+  MailerQueue:
+    Type: AWS::SQS::Queue
+  MailerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: PutCloudWatchLogs
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: SendSES
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ses:SendEmail
+            Resource: '*'
+      - PolicyName: ReceiveSQS
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - sqs:DeleteMessage
+            - sqs:ReceiveMessage
+            Resource: !GetAtt MailerQueue.Arn
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/ReadOnlyAccess
+  PolicyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: PutCloudWatchLogs
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: PutCloudWatchMetrics
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: ManageTags
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:CreateTags
+            - ec2:DeleteTags
+            Resource: '*'
+      - PolicyName: SendSQS
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - sqs:SendMessage
+            Resource: !GetAtt MailerQueue.Arn
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/ReadOnlyAccess
+Outputs:
+  MailerRole:
+    Description: Role for the mailer lambda function
+    Value: !GetAtt MailerRole.Arn
+  MailerQueue:
+    Description: URL for the mailer SQL queue
+    Value: !Ref MailerQueue
+  PolicyRole:
+    Description: Role for the policy lambda function
+    Value: !GetAtt PolicyRole.Arn

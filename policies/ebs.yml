@@ -1,0 +1,75 @@
+policies:
+
+
+
+
+# Use Case: Report all EBS volumes that are unattached
+- name: ec2-old-volumes-schedule
+  mode:
+    type: periodic
+    schedule: rate(5 minutes)
+  resource: ebs
+  description: |
+    Schedule deletion of old EBS volumes
+  filters:
+    - Attachments: []
+    - tag:maid_status: absent
+  actions:
+    - type: mark-for-op
+      op: delete
+      days: 1
+
+# Use Case: Unmark any EBS volumes that have been reattached
+- name: ec2-old-volumes-reattached
+  mode:
+    type: periodic
+    schedule: rate(5 minutes)
+  resource: ebs
+  description: |
+    Unmark any attached EBS volumes that were scheduled for deletion
+    if they are currently attached
+  filters:
+    - type: value
+      key: Attachments[0].Device
+      value: not-null
+    - tag:maid_status: not-null
+  actions:
+    - unmark
+
+# Use Case: Notify all EBS volumes scheduled for deletion
+- name: ec2-old-volumes-notify
+  mode:
+    type: periodic
+    schedule: cron(30 0 * * ? *)
+  resource: ebs
+  description: |
+    Notify of EBS volumes scheduled for deletion
+  filters:
+    - type: marked-for-op
+      op: delete
+      skew: 1
+  actions:
+    - type: notify
+      template: delete-html
+      to:
+        - ${MAILER_TO_ADDRESS}
+        - resource-owner
+      transport:
+        type: sqs
+        queue: ${MAILER_QUEUE}
+
+# Use Case: Delete all EBS volumes that are scheduled for deletion
+- name: ec2-old-volumes-delete
+  mode:
+    type: periodic
+    schedule: cron(30 23 * * ? *)
+  resource: ebs
+  description: |
+    Delete any attached EBS volumes that were scheduled for deletion
+  filters:
+    - type: marked-for-op
+      op: delete
+  #actions:
+  #  - delete
+
+

@@ -1,0 +1,7 @@
+
+The following {{ policy['resource'] }} resources in account:{{ account }} and region:{{ region }} need attention:
+
+{% for resource in resources %}
+   {{ format_resource(resource, policy['resource']) }}
+{% endfor %}
+

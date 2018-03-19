@@ -1,0 +1,55 @@
+policies:
+
+# Use Case: Report all AMIs that are old
+- name: ec2-old-images-schedule
+  mode:
+    type: periodic
+    schedule: rate(5 minutes)
+  resource: ami
+  description: |
+    Schedule deregistration of old AMIs
+  filters:
+    - type: image-age
+      days: 4
+  actions:
+    - type: mark-for-op
+      op: deregister
+      days: 1
+
+# Use Case: Notify all AMIs scheduled for deregistration
+- name: ec2-old-images-notify
+  mode:
+    type: periodic
+    schedule: cron(30 0 * * ? *)
+  resource: ami
+  description: |
+    Notify of AMI images scheduled for deregistration
+  filters:
+    - type: marked-for-op
+      op: deregister
+      skew: 1
+  actions:
+    - type: notify
+      template: delete-html
+      to:
+        - ${MAILER_TO_ADDRESS}
+        - resource-owner
+      transport:
+        type: sqs
+        queue: ${MAILER_QUEUE}
+
+# Use Case: Delete all EBS volumes that are scheduled for deregistration
+- name: ec2-old-image-deregister
+  mode:
+    type: periodic
+    schedule: cron(30 23 * * ? *)
+  resource: ami
+  description: |
+    Deregister any attached EBS volumes that were scheduled for deregisteration
+  filters:
+    - type: marked-for-op
+      op: deregister
+  #actions:
+  #  - deregister
+
+

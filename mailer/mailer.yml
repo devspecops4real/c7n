@@ -1,0 +1,10 @@
+# Which queue should we listen to for messages
+queue_url: ${MAILER_QUEUE}
+
+# Default from address
+from_address: ${MAILER_FROM_ADDRESS}
+
+## Standard Lambda Function Config
+region: ${COMMON_REGION}
+role: ${MAILER_ROLE}
+timeout: 300

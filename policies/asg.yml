@@ -1,0 +1,71 @@
+policies:
+
+# Use Case: Schedule deletion of all ASG that are 2 days or older
+- name: ec2-old-asg-schedule
+  mode:
+    type: periodic
+    schedule: rate(5 minutes)
+  resource: asg
+  description: |
+    Schedule deletion of old ASG
+  filters:
+    - type: launch-config
+      key: age
+      op: gt
+      value: 2
+  actions:
+    - type: mark-for-op
+      op: delete
+      days: 1
+
+# Use Case: Notify all ASG scheduled for deletion
+- name: ec2-old-asg-notify
+  mode:
+    type: periodic
+    schedule: cron(30 0 * * ? *)
+  resource: asg
+  description: |
+    Notify of ASGs scheduled for termination
+  filters:
+    - type: marked-for-op
+      op: delete
+      skew: 1
+  actions:
+    - type: notify
+      template: delete-html
+      to:
+        - ${MAILER_TO_ADDRESS}
+        - resource-owner
+      transport:
+        type: sqs
+        queue: ${MAILER_QUEUE}
+
+# Use Case: Terminate all ASG scheduled for deletion
+- name: ec2-old-asg-delete
+  mode:
+    type: periodic
+    schedule: cron(30 23 * * ? *)
+  resource: asg
+  description: |
+    Terminate old ASG instances
+  filters:
+    - type: marked-for-op
+      op: delete
+  #action:
+  #  - delete
+
+# Use Case: Terminate all LC that are unused
+- name: ec2-unused-launchconfig-delete
+  mode:
+    type: periodic
+    schedule: cron(45 23 * * ? *)
+  resource: launch-config
+  description: |
+    Terminate unused launch configurations
+  filters:
+    - unused
+    - type: age
+      op: gt
+      days: 2
+  #action:
+  #  - delete

@@ -1,0 +1,54 @@
+policies:
+
+# Use Case: Schedule termination of all EC2 instances that are 2 days or older
+- name: ec2-old-instances-schedule
+  mode:
+    type: periodic
+    schedule: rate(5 minutes)
+  resource: ec2
+  description: |
+    Schedule termination of old EC2 instances
+  filters:
+    - type: instance-age
+      op: gt
+      days: 2
+  actions:
+    - type: mark-for-op
+      op: terminate
+      days: 1
+
+# Use Case: Notify all EC2 instances schedule for termination
+- name: ec2-old-instances-notify
+  mode:
+    type: periodic
+    schedule: cron(30 0 * * ? *)
+  resource: ec2
+  description: |
+    Notify of EC2 instances scheduled for termination
+  filters:
+    - type: marked-for-op
+      op: terminate
+      skew: 1
+  actions:
+    - type: notify
+      template: delete-html
+      to:
+        - ${MAILER_TO_ADDRESS}
+        - resource-owner
+      transport:
+        type: sqs
+        queue: ${MAILER_QUEUE}
+
+# Use Case: Terminate all EC2 instances scheduled for termination
+- name: ec2-old-instances-terminate
+  mode:
+    type: periodic
+    schedule: cron(30 23 * * ? *)
+  resource: ec2
+  description: |
+    Terminate old EC2 instances
+  filters:
+    - type: marked-for-op
+      op: terminate
+  #action:
+  #  - terminate

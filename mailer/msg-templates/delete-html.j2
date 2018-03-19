@@ -1,0 +1,9 @@
+
+The following <b>{{ policy['resource'] }}</b> resources in <b>account:</b>{{ account }} and <b>region:</b>{{ region }} are scheduled to be deleted in the next 24 hours:
+
+<ul>
+{% for resource in resources %}
+   <li><pre>{{ format_resource(resource, policy['resource']) }}</pre></li>
+{% endfor %}
+</ul>
+
